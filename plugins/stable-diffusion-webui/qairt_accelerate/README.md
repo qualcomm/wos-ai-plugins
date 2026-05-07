@@ -17,35 +17,70 @@ Stable Diffusion WebUI can now be run on Qualcomm X-Elite NPU with [Qualcomm AI 
 
 ## Instructions to run WebUI with QAIRT (Windows):
 
-### Step 1: Install Dependencies
-Download and install [git](https://github.com/git-for-windows/git/releases/download/v2.39.2.windows.1/Git-2.39.2-64-bit.exe) and [Python 3.10.6](https://www.python.org/ftp/python/3.10.6/python-3.10.6-amd64.exe)
+🧰 **Prerequisites**
+Before you begin, make sure the following are installed:
 
-> **_NOTE:_** The program is tested to work on Python `3.10.6`. Don't use other versions.
+[Git](https://github.com/git-for-windows/git/releases/download/v2.39.2.windows.1/Git-2.39.2-64-bit.exe)
+[Python 3.10.6](https://www.python.org/ftp/python/3.10.6/python-3.10.6-amd64.exe)
 
-### Step 2: Download AUTOMATIC1111 stable-diffusion-webui
-Run below commands in Windows PowerShell terminal.
+⚠️ Important: This extension is tested only with Python 3.10.6. Other versions may cause compatibility issues.
+
+- [ ] 📦 Step 1: Clone the WebUI Repository
+
+Open PowerShell and run:
 
 ```
 git clone https://github.com/AUTOMATIC1111/stable-diffusion-webui.git
 cd stable-diffusion-webui
+
 ```
 
-### Step 3: Download Extension
-Download `stable-diffusion-webui-qairt-extension.zip` from the [latest release](https://github.com/quic/wos-ai-plugins/releases/tag/v1.3-automatic1111-webui).
-Unzip and place the `qairt_accelerate` extension under `stable-diffusion-webui\extensions`
+- [ ] 🔌 Step 2: Install the qairt_accelerate Extension
 
-### Step 4: Launch the WebUI
+1. Download the latest stable-diffusion-webui-qairt-extension_v1.3.zip.
+2. Extract the contents.
+3. Move the qairt_accelerate folder into the following directory:
+
+> stable-diffusion-webui\extensions\
+
+
+- [ ] 🚀 Step 4: Launch the WebUI with Extension
+
+> In the same PowerShell window, run:
 
 ```
 $env:TORCH_INDEX_URL="https://download.pytorch.org/whl/cpu"
 $env:WEBUI_LAUNCH_LIVE_OUTPUT=1
+$env:STABLE_DIFFUSION_REPO="https://github.com/w-e-w/stablediffusion.git"
+$env:QNN_SDK_ROOT="<to QNN path>" default it will install and keep : C:\Qualcomm\AIStack\QAIRT\2.40.0.251030
 
 .\webui.bat --skip-torch-cuda-test --no-half --precision full --ui-config-file .\extensions\qairt_accelerate\ui-config.json
 ```
 
-The steps above will create a virtual environment and install the required packages into this environment.
+🛠️ This will automatically create a virtual environment and install all required dependencies.
 
-
+⚙️ **Troubleshooting Guide**
+1. CLIP Build Failure (pkg_resources missing):
+```
+.\venv\Scripts\activate
+python -m pip uninstall -y setuptools
+python -m pip install --no-cache-dir "setuptools==68.2.2" "wheel==0.41.2" "pip>=23.2"
+python -c "import pkg_resources; print('OK:', pkg_resources.__version__)"
+python -m pip install --no-build-isolation git+https://github.com/openai/CLIP.git@d50d76daa670286dd6cacf3bcd80b5e4823fc8e1
+```
+2. Torch XPU Error (module 'torch' has no attribute 'xpu'):
+```
+.\venv\Scripts\activate
+python -m pip install --upgrade "diffusers==0.27.2"
+# If issues persist:
+# python -m pip install --upgrade "diffusers==0.25.0"
+```
+3. HuggingFace Cache Error (cached_download removed):
+```
+.\venv\Scripts\activate
+python -m pip install --upgrade "diffusers==0.25.0" "huggingface_hub==0.19.4" "transformers==4.40.2"
+deactivate
+```
 ## Troubleshooting
 
 * To reinstall from scratch, delete directory: `venv`

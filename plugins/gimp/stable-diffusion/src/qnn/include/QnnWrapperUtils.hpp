@@ -1,10 +1,9 @@
-//==============================================================================
-//
-//  Copyright (c) 2019-2023 Qualcomm Technologies, Inc.
-//  All Rights Reserved.
-//  Confidential and Proprietary - Qualcomm Technologies, Inc.
-//
-//==============================================================================
+/*
+**************************************************************************************************
+* Copyright (c) 2026 Qualcomm Innovation Center, Inc. All rights reserved.
+* SPDX-License-Identifier: BSD-3-Clause-Clear
+**************************************************************************************************
+*/
 
 #pragma once
 

@@ -23,10 +23,8 @@ from qai_appbuilder import (
     PerfProfile,
     QNNConfig,
 )
-from diffusers.models.embeddings import get_timestep_embedding, TimestepEmbedding
 import qairt_constants as consts
-from pipeline_utils import StableDiffusionInput, download_qualcomm_models_hf, UpscalerPipeline, QPipeline, set_scheduler
-from modules.safe import unsafe_torch_load as load
+from pipeline_utils import StableDiffusionInput, download_qualcomm_models_hf, UpscalerPipeline, QPipeline, set_scheduler, ensure_qnn_config
 
 
 class TextEncoder(QNNContext):
@@ -61,7 +59,6 @@ class Unet(QNNContext):
         input_data_15,
         input_data_16,
     ):
-        # We need to reshape the array to 1 dimensionality before send it to the network. 'input_data_2' already is 1 dimensionality, so doesn't need to reshape.
         input_data_1 = input_data_1.reshape(input_data_1.size)
         input_data_3 = input_data_3.reshape(input_data_3.size)
         input_data_4 = input_data_4.reshape(input_data_4.size)
@@ -118,8 +115,6 @@ class VaeDecoder(QNNContext):
 class ControlNet(QNNContext):
     # @timer
     def Inference(self, input_data_1, input_data_2, input_data_3, input_data_4):
-        # We need to reshape the array to 1 dimensionality before send it to the network. 'input_data_2' already is 1 dimensionality, so doesn't need to reshape.
-
         input_data_1 = input_data_1.reshape(input_data_1.size)
         input_data_3 = input_data_3.reshape(input_data_3.size)
         input_data_4 = input_data_4.reshape(input_data_4.size)
@@ -145,16 +140,9 @@ class QnnControlNetPipeline(QPipeline):
     vae_decoder = None
     controlnet = None
 
-    unet_time_embeddings_1_5 = None
-    unet_time_embeddings_2_1 = None
-
     def __init__(self, model_name):
         print(f"model_name in CNPipeline: {model_name}")
         super().__init__(model_name)
-        self.unet_time_embeddings_1_5 = TimestepEmbedding(320, 1280)
-        self.unet_time_embeddings_1_5.load_state_dict(
-            load(consts.TIMESTEP_EMBEDDING_1_5_MODEL_PATH)
-        )
         self.load_model()
 
         torch.from_numpy(
@@ -208,12 +196,6 @@ class QnnControlNetPipeline(QPipeline):
     def get_timestep(self, step):
         return np.int32(self.scheduler.timesteps.numpy()[step])
 
-    def get_time_embedding(self, timestep, unet_time_embeddings):
-        timestep = torch.tensor([timestep])
-        t_emb = get_timestep_embedding(timestep, 320, True, 0)
-        emb = unet_time_embeddings(t_emb).detach().numpy()
-        return emb
-
     def make_canny_image(self, input_image: Image):
         image = np.asarray(input_image)
 
@@ -235,9 +217,7 @@ class QnnControlNetPipeline(QPipeline):
         return image
 
     def load_model(self):
-        QNNConfig.Config(
-            consts.QNN_LIBS_DIR, Runtime.HTP, LogLevel.ERROR, ProfilingLevel.BASIC
-        )
+        ensure_qnn_config()
         # model names
         model_text_encoder = "text_encoder"
         model_unet = "model_unet"
@@ -312,24 +292,28 @@ class QnnControlNetPipeline(QPipeline):
         # image = load_image(input_image_path)
         canny_image = self.make_canny_image(image)
 
-        # Run the loop for user_step times
-        for step in range(sd_input.user_step):
-            time_step = self.get_timestep(step)
+        for step, timestep in enumerate(self.scheduler.timesteps):
+            time_step = np.int32(timestep.item())
             time_embedding = np.array([[time_step]], dtype=np.float32)
+
+            latent_input = self.scheduler.scale_model_input(
+                torch.as_tensor(latent_in).contiguous(),
+                timestep,
+            ).numpy()
+
             controlnet_out = self.controlnet.Inference(
-                latent_in, time_embedding, user_text_embedding, canny_image
+                user_text_embedding, canny_image, latent_input, time_embedding
             )
 
             conditional_noise_pred = self.unet.Inference(
-                latent_in, time_embedding, user_text_embedding, *controlnet_out
+                time_embedding, latent_input, user_text_embedding, *controlnet_out
             )
 
             controlnet_out = self.controlnet.Inference(
-                latent_in, time_embedding, uncond_text_embedding, canny_image
+                uncond_text_embedding, canny_image, latent_input, time_embedding
             )
-
             unconditional_noise_pred = self.unet.Inference(
-                latent_in, time_embedding, uncond_text_embedding, *controlnet_out
+                time_embedding, latent_input, uncond_text_embedding, *controlnet_out
             )
 
             latent_in = self.run_scheduler(
@@ -337,7 +321,7 @@ class QnnControlNetPipeline(QPipeline):
                 unconditional_noise_pred,
                 conditional_noise_pred,
                 latent_in,
-                time_step,
+                timestep,
             )
 
             callback(step)
@@ -356,7 +340,7 @@ class QnnControlNetPipeline(QPipeline):
 
             output_image = np.clip(output_image * 255.0, 0.0, 255.0).astype(np.uint8)
             output_image = output_image.reshape(image_size, image_size, -1)
-            image = Image.fromarray(output_image, mode="RGB")  # .save(image_path)
+            image = Image.fromarray(output_image, mode="RGB")  
 
             callback(image)
 
@@ -375,4 +359,3 @@ class QnnControlNetPipeline(QPipeline):
 
     def is_model_loaded(self):
         return self.unet != None
-

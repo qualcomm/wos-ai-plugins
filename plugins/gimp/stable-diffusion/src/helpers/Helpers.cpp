@@ -42,10 +42,8 @@ std::string Helpers::stripPath
 ( const std::string& path
 )
 {
-   size_t pos = path.find_last_of('/');
-   // if we are end  of string returns '/' since we were given something like
-   // /a other return the basepath
-   return (pos == std::string::npos) ? "/" : path.substr(0, pos);
+   size_t pos = path.find_last_of("/\\");
+   return (pos == std::string::npos) ? "." : path.substr(0, pos);
 }
 
 std::string Helpers::joinPath

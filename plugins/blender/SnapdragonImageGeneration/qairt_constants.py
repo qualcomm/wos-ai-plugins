@@ -24,10 +24,11 @@ OUTPUTS_DIR=os.path.join(PLUGIN_DIR, "Outputs")
 LOGS_DIR=os.path.join(PLUGIN_DIR, "logs")
 LOG_FILE=os.path.join(LOGS_DIR, "model_log.txt")
 
-QNN_SDK_DOWNLOAD_URL="https://softwarecenter.qualcomm.com/api/download/software/sdks/Qualcomm_AI_Runtime_Community/All/2.44.0.260225/v2.44.0.260225.zip"
 
-QAIRT_VERSION = "2.44.0.260225"
-DSP_ARCH = ["73", "81"]  # For X-Elite device.
+QAIRT_VERSION = "2.46.0.260424"
+QNN_SDK_DOWNLOAD_URL = f"https://softwarecenter.qualcomm.com/api/download/software/sdks/Qualcomm_AI_Runtime_Community/All/{QAIRT_VERSION}/v{QAIRT_VERSION}.zip"
+
+DSP_ARCH = ["73", "81"]  
 
 QNN_LIBS_DIR = os.path.join(PLUGIN_DIR, "qnn_assets", "qnn_libs")
 SDK_SAVE_PATH= os.path.join(LONG_PATH_PREFIX_PLUGIN_DIR, f"{QAIRT_VERSION}.zip")
@@ -38,17 +39,13 @@ CONTROLNET_DIR=os.path.join(PLUGIN_DIR, "qnn_assets", "models", "controlnet")
 CACHE_DIR = os.path.join(PLUGIN_DIR, "qnn_assets", "models", "cache")
 CONVERTION_DIR = os.path.join(PLUGIN_DIR, "model_conversion")
 
-#ControlNet -Canny 0.34.3 bin files
-CONTROLNET_HF_URLS = {
-    "controlnet.bin":
-        "https://huggingface.co/qualcomm/ControlNet-Canny/resolve/v0.34.3/precompiled/qualcomm-snapdragon-x-elite/ControlNet-Canny_controlnet_w8a16.bin",
 
-    "text_encoder.bin":
-        "https://huggingface.co/qualcomm/ControlNet-Canny/resolve/v0.34.3/precompiled/qualcomm-snapdragon-x-elite/ControlNet-Canny_text_encoder_w8a16.bin",
+CONTROLNET_BINARY_URLS = {
+    73: "https://qaihub-public-assets.s3.us-west-2.amazonaws.com/qai-hub-models/models/controlnet_canny/releases/v0.53.1/controlnet_canny-qnn_context_binary-w8a16-qualcomm_snapdragon_x_elite.zip",
+    81: "https://qaihub-public-assets.s3.us-west-2.amazonaws.com/qai-hub-models/models/controlnet_canny/releases/v0.53.1/controlnet_canny-qnn_context_binary-w8a16-qualcomm_snapdragon_x2_elite.zip",
+}
 
-    "unet.bin":
-        "https://huggingface.co/qualcomm/ControlNet-Canny/resolve/v0.34.3/precompiled/qualcomm-snapdragon-x-elite/ControlNet-Canny_unet_w8a16.bin",
-
-    "vae.bin":
-        "https://huggingface.co/qualcomm/ControlNet-Canny/resolve/v0.34.3/precompiled/qualcomm-snapdragon-x-elite/ControlNet-Canny_vae_w8a16.bin",
+BIOS_ARCH_MAP = {
+    8380: 73,
+    8480: 81,
 }

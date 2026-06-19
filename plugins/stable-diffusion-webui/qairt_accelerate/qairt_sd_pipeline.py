@@ -22,10 +22,9 @@ from qai_appbuilder import (
     QNNConfig,
     timer,
 )
-from diffusers.models.embeddings import get_timestep_embedding, TimestepEmbedding
 import qairt_constants as consts
 import common_utils as utils
-from pipeline_utils import StableDiffusionInput, UpscalerPipeline, QPipeline, set_scheduler
+from pipeline_utils import StableDiffusionInput, UpscalerPipeline, QPipeline, set_scheduler, ensure_qnn_config
 
 model_path_1_5 = os.path.abspath(
     os.path.join(paths.models_path, "Stable-diffusion", "qcom-Stable-Diffusion-v1.5")
@@ -35,7 +34,6 @@ model_path_2_1 = os.path.abspath(
 )
 
 
-from modules.safe import unsafe_torch_load as load
 user_alpha = torch.tensor([128],dtype=torch.float32).numpy()
 
 class TextEncoder(QNNContext):
@@ -67,7 +65,6 @@ class TextEncoder_2(QNNContext):
 class Unet(QNNContext):
     # @timer
     def Inference(self, version, input_data_1, input_data_2, input_data_3, user_alpha =None, input_data_4 = None):
-        # We need to reshape the array to 1 dimensionality before send it to the network. 'input_data_2' already is 1 dimensionality, so doesn't need to reshape.
         input_data_1 = input_data_1.reshape(input_data_1.size)
         input_data_3 = input_data_3.reshape(input_data_3.size)
         if version=="1.5" or version=="2.1":
@@ -111,19 +108,11 @@ class QnnStableDiffusionPipeline(QPipeline):
     unet = None
     vae_decoder = None
 
-    unet_time_embeddings = None
-
     sd_version = None
 
     def __init__(self, model_name):
         super().__init__(model_name)
         self.set_model_version(model_name)
-
-        self.unet_time_embeddings = TimestepEmbedding(320, 1280)
-        if self.sd_version == "1.5":
-            self.unet_time_embeddings.load_state_dict(load(consts.TIMESTEP_EMBEDDING_1_5_MODEL_PATH))
-        elif self.sd_version == "2.1":
-            self.unet_time_embeddings.load_state_dict(load(consts.TIMESTEP_EMBEDDING_2_1_MODEL_PATH))
         self.load_model()
 
         torch.from_numpy(
@@ -142,7 +131,7 @@ class QnnStableDiffusionPipeline(QPipeline):
             max_length=self.TOKENIZER_MAX_LENGTH,
             truncation=True,
         )
-        text_input = np.array(text_input.input_ids, dtype=np.float32)
+        text_input = np.array(text_input.input_ids, dtype=np.int32)
         return text_input
     
     def run_tokenizer_2(self, prompt):
@@ -187,12 +176,6 @@ class QnnStableDiffusionPipeline(QPipeline):
     def get_timestep(self, step):
         return np.int32(self.scheduler.timesteps.numpy()[step])
 
-    def get_time_embedding(self, timestep, unet_time_embeddings):
-        timestep = torch.tensor([timestep])
-        t_emb = get_timestep_embedding(timestep, 320, True, 0)
-        emb = unet_time_embeddings(t_emb).detach().numpy()
-        return emb
-
     def set_model_version(self, model_name):
         if model_name == "Stable-Diffusion-1.5":
             self.sd_version = "1.5"
@@ -200,9 +183,7 @@ class QnnStableDiffusionPipeline(QPipeline):
             self.sd_version = "2.1"
 
     def load_model(self):
-        QNNConfig.Config(
-            consts.QNN_LIBS_DIR, Runtime.HTP, LogLevel.ERROR, ProfilingLevel.BASIC
-        )
+        ensure_qnn_config()
         # model names
         model_text_encoder = "text_encoder"
         model_unet = "model_unet"
@@ -218,13 +199,15 @@ class QnnStableDiffusionPipeline(QPipeline):
             if self.is_sd_1_5():
                 model_path = model_path_1_5
                 self.tokenizer = CLIPTokenizer.from_pretrained(
-                    "openai/clip-vit-base-patch32",
+                    "stable-diffusion-v1-5/stable-diffusion-v1-5",
+                    subfolder="tokenizer",
+                    revision="main",
                     cache_dir=consts.CACHE_DIR
                 )
             else:
                 model_path = model_path_2_1
                 self.tokenizer = CLIPTokenizer.from_pretrained(
-                    "sd-research/stable-diffusion-2-1-base",
+                    "sd2-community/stable-diffusion-2-1",
                     subfolder="tokenizer",
                     revision="main",
                     cache_dir=consts.CACHE_DIR,
@@ -264,7 +247,7 @@ class QnnStableDiffusionPipeline(QPipeline):
 
         PerfProfile.SetPerfProfileGlobal(PerfProfile.BURST)
         if self.sd_version == "2.1":
-            self.scheduler = set_scheduler("sd-research/stable-diffusion-2-1-base", sd_input.sampler_name)
+            self.scheduler = set_scheduler("sd2-community/stable-diffusion-2-1", sd_input.sampler_name)
         elif self.sd_version == "1.5":
             self.scheduler = set_scheduler("stable-diffusion-v1-5/stable-diffusion-v1-5", sd_input.sampler_name)
 
@@ -296,25 +279,28 @@ class QnnStableDiffusionPipeline(QPipeline):
             latent_in = random_init_latent.transpose(0, 2, 3, 1).copy()
         # Initialize the latent input with random initial latent
         else:
-            random_init_latent = torch.randn((1, 4, 64, 64), generator=torch.manual_seed(sd_input.user_seed)).numpy()
-            latent_in = random_init_latent.transpose(0, 2, 3, 1)
+            random_init_latent = torch.randn((1, 4, 64, 64), generator=torch.manual_seed(sd_input.user_seed))
+            random_init_latent = random_init_latent * self.scheduler.init_noise_sigma
+            latent_in = random_init_latent.numpy().transpose(0, 2, 3, 1)
 
-        # Run the loop for user_step times
-        for step in range(sd_input.user_step):
-            time_step = self.get_timestep(step)
-            time_embedding = self.get_time_embedding(time_step, self.unet_time_embeddings)
-            
+        for step, timestep in enumerate(self.scheduler.timesteps):
+            # Scale latent for this timestep before feeding into UNet
+            latent_input = self.scheduler.scale_model_input(
+                torch.as_tensor(latent_in).contiguous(),
+                timestep,
+            ).numpy()
+
+            time_embedding = np.array([[timestep.item()]], dtype=np.float32)
+
             if not (self.is_sd_1_5() or self.is_sd_2_1()):
-                unconditional_noise_pred = self.unet.Inference( self.sd_version, uncond_pooled_embedding, latent_in, uncond_text_embedding, user_alpha, time_embedding)
+                unconditional_noise_pred = self.unet.Inference(self.sd_version, uncond_pooled_embedding, latent_in, uncond_text_embedding, user_alpha, time_embedding)
                 conditional_noise_pred = self.unet.Inference(self.sd_version, user_pooled_embedding, latent_in, user_text_embedding, user_alpha, time_embedding)
-
             else:
-
                 unconditional_noise_pred = self.unet.Inference(
-                    self.sd_version, latent_in, time_embedding, uncond_text_embedding
+                    self.sd_version, time_embedding, latent_input, uncond_text_embedding
                 )
                 conditional_noise_pred = self.unet.Inference(
-                    self.sd_version, latent_in, time_embedding, user_text_embedding
+                    self.sd_version, time_embedding, latent_input, user_text_embedding
                 )
 
             latent_in = self.run_scheduler(
@@ -322,9 +308,9 @@ class QnnStableDiffusionPipeline(QPipeline):
                 unconditional_noise_pred,
                 conditional_noise_pred,
                 latent_in,
-                time_step,
+                timestep,
             )
-                
+
             callback(step)
 
         # Run VAE
@@ -366,4 +352,3 @@ class QnnStableDiffusionPipeline(QPipeline):
 
     def is_model_loaded(self):
         return self.unet != None
-

@@ -10,7 +10,7 @@ This plugin is tested with GIMP 2.99.18.
 
 ## 3. Install plugin
 
-Take the latest plugin release zip from the [releases page](https://github.com/quic/wos-ai-plugins/releases/tag/v1.4-gimp).
+Take the latest plugin release zip from the [releases page](https://github.com/qualcomm/wos-ai-plugins/releases/tag/v2.0-gimp).
 Unzip and run the `install_plugin.bat` <br>
 
 <img src="../docs/resources/plugin_folder.png" alt="drawing" style="width:400px;"/>

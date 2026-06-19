@@ -10,14 +10,9 @@ import os
 import qairt_constants as consts
 import zipfile
 import shutil
-import zipfile
-import torch
-import numpy as np
-from diffusers.models.embeddings import get_timestep_embedding, TimestepEmbedding
-from diffusers import UNet2DConditionModel
-from diffusers import DPMSolverMultistepScheduler
 import requests
 import subprocess
+from detect_htp_arch import get_htp_architecture
 
 
 def run(command, desc=None, errdesc=None, custom_env=None, live: bool = True) -> str:
@@ -76,55 +71,107 @@ def download_qairt_sdk():
 
 
 def setup_qairt_env():
-    # Preparing all the binaries and libraries for execution.
-    SDK_lib_dir = consts.QNN_SDK_ROOT + "\\lib\\arm64x-windows-msvc"
-    libs = [
+    """Copy QNN runtime libraries for the detected architecture into QNN_LIBS_DIR."""
+    arch = get_htp_architecture()
+
+    SDK_lib_dir = os.path.join(consts.QNN_SDK_ROOT, "lib", "arm64x-windows-msvc")
+
+    # Common libraries required regardless of architecture
+    common_libs = [
         "QnnHtp.dll",
         "QnnSystem.dll",
         "QnnHtpPrepare.dll",
-        "QnnHtpV73Stub.dll",
-        "QnnHtpV81Stub.dll",
     ]
-
-   # Copy necessary libraries to a common location
-    for lib in libs:
+    for lib in common_libs:
         src = os.path.join(SDK_lib_dir, lib)
         dst = os.path.join(consts.QNN_LIBS_DIR, lib)
         if not os.path.isfile(dst):
             shutil.copy(src, dst)
 
-    for arch in consts.DSP_ARCH:
-        SDK_hexagon_dir = consts.QNN_SDK_ROOT + f"\\lib\\hexagon-v{arch}\\unsigned"
+    if arch is not None:
+        archs_to_copy = [str(arch)]
+        print(f"Detected architecture: {arch}. Copying arch-specific libraries for v{arch}.")
+    else:
+        archs_to_copy = ["73", "81"] 
+        print("WARNING: Could not detect architecture. Defaulting to archs 73 and 81.")
 
-        arch_libs = [
-            f"libQnnHtpV{arch}Skel.so",
-            f"libqnnhtpv{arch}.cat",
+    for arch_str in archs_to_copy:
+        stub_lib = f"QnnHtpV{arch_str}Stub.dll"
+        src = os.path.join(SDK_lib_dir, stub_lib)
+        dst = os.path.join(consts.QNN_LIBS_DIR, stub_lib)
+        if not os.path.isfile(dst):
+            shutil.copy(src, dst)
+
+        SDK_hexagon_dir = os.path.join(
+            consts.QNN_SDK_ROOT, "lib", f"hexagon-v{arch_str}", "unsigned"
+        )
+        hexagon_libs = [
+            f"libQnnHtpV{arch_str}Skel.so",
+            f"libqnnhtpv{arch_str}.cat",
         ]
-
-        for lib in arch_libs:
+        for lib in hexagon_libs:
             src = os.path.join(SDK_hexagon_dir, lib)
             dst = os.path.join(consts.QNN_LIBS_DIR, lib)
             if not os.path.isfile(dst):
                 shutil.copy(src, dst)
 
 
+def _map_bin_filename(filename):
+    fname_lower = filename.lower()
+    if "text_encoder" in fname_lower or "text-encoder" in fname_lower:
+        return "text_encoder.bin"
+    elif "unet" in fname_lower:
+        return "unet.bin"
+    elif "vae" in fname_lower:
+        return "vae.bin"
+    elif "controlnet" in fname_lower:
+        return "controlnet.bin"
+    return None  
+
+
 def controlnet_download():
     os.makedirs(consts.CONTROLNET_DIR, exist_ok=True)
+    # Detect architecture
+    arch = get_htp_architecture()
+    if arch is None:
+        arch = 73
+        print(f"WARNING: Could not detect architecture. Defaulting to arch {arch}.")
 
-    print("Downloading ControlNet-Canny model binaries...")
+    # Skip download if all expected binaries are already present
+    expected_files = ["controlnet.bin", "text_encoder.bin", "unet.bin", "vae.bin"]
+    if all(os.path.isfile(os.path.join(consts.CONTROLNET_DIR, f)) for f in expected_files):
+        print("ControlNet binaries already present, skipping download.")
+        return
 
-    for filename, url in consts.CONTROLNET_HF_URLS.items():
-        save_path = os.path.join(consts.CONTROLNET_DIR, filename)
+    url = consts.CONTROLNET_BINARY_URLS[arch]
+    zip_filename = url.split("/")[-1]
+    zip_save_path = os.path.join(consts.CONTROLNET_DIR, zip_filename)
 
-        if os.path.isfile(save_path):
-            print(f"Already exists: {filename}")
-            continue
+    print(f"Detected architecture: {arch}")
+    print(f"Downloading ControlNet-Canny binaries (arch {arch})...")
+    print(f"  URL : {url}")
+    download_url(url, zip_save_path)
 
-        print(f"Downloading {filename} ...")
-        download_url(url, save_path)
+    print("Extracting binaries...")
+    with zipfile.ZipFile(zip_save_path, "r") as zf:
+        for member in zf.namelist():
+            if not member.endswith(".bin"):
+                continue
+            src_name = os.path.basename(member)
+            dest_name = _map_bin_filename(src_name)
+            if dest_name is None:
+                print(f"  Skipping unrecognised file: {src_name}")
+                continue
+            dest_path = os.path.join(consts.CONTROLNET_DIR, dest_name)
+            with zf.open(member) as src_file, open(dest_path, "wb") as dst_file:
+                dst_file.write(src_file.read())
+            print(f"  Extracted: {src_name}  →  {dest_name}")
+
+    os.remove(zip_save_path)
+    print("ControlNet binaries ready.")
 
 
-print(f"Downloading QAIRT model bin files...")
+print("Downloading QAIRT model bin files...")
 
 os.makedirs(consts.QNN_LIBS_DIR, exist_ok=True)
 os.makedirs(consts.CONTROLNET_DIR, exist_ok=True)
@@ -133,14 +180,3 @@ os.makedirs(consts.LOGS_DIR, exist_ok=True)
 download_qairt_sdk()
 setup_qairt_env()
 controlnet_download()
-
-
-scheduler = DPMSolverMultistepScheduler(
-    num_train_timesteps=1000,
-    beta_start=0.00085,
-    beta_end=0.012,
-    beta_schedule="scaled_linear",
-)
-
-def get_timestep(step):
-    return np.int32(scheduler.timesteps.numpy()[step])

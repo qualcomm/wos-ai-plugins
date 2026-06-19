@@ -247,7 +247,13 @@ bool processCommandLine(int argc,
     }
 
     UiHelper *ui = new UiHelper(config_file_Path, backEndPath, model_version);
-    bool ret = ui->init();
+
+    // If init fails, exit cleanly before connecting to the socket server
+    if (!ui->init()) {
+        fprintf(stderr, "Initialization failure — aborting\n");
+        delete ui;
+        return false;
+    }
 
     socket_communication::Client client("127.0.0.1", 5001);
     std::cout << "server started" << std::endl;
@@ -274,13 +280,18 @@ bool processCommandLine(int argc,
                 token = strtok(NULL, ":");
             }
 
+            if (inputs.size() < 5)
+                break;
+
             seed = std::stoi(inputs[1]);
             step = std::stoi(inputs[2]);
             prompt = inputs[3];
             guidance_scale = std::stof(inputs[0]);
             num_images = std::stoi(inputs[4]);
 
-            std::cout << "\nInputs are: \nPrompt : " << prompt << "\nSeed : " << seed << "\nStep : " << step << "\nGuidance Scale: " << guidance_scale << "\nNumber of Images: " << num_images << std::endl;
+            std::cout << "\nInputs are: \nPrompt : " << prompt << "\nSeed : " << seed
+                      << "\nStep : " << step << "\nGuidance Scale: " << guidance_scale
+                      << "\nNumber of Images: " << num_images << std::endl;
             break;
         }
     }
@@ -294,10 +305,9 @@ bool processCommandLine(int argc,
         std::cout << "[Server]: " << data << std::endl;
         if (data == "execute_next")
         {
-            bool ret = ui->executeStableDiffusion(seed, step, guidance_scale, prompt);
-            
-            cv::imwrite("test.jpeg", ui->outputModelImage);
-
+            bool execRet = ui->executeStableDiffusion(seed, step, guidance_scale, prompt);
+            if (execRet)
+                cv::imwrite("test.jpeg", ui->outputModelImage);
             client.Send("execution_complete");
         }
         else

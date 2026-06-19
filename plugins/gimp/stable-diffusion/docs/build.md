@@ -3,8 +3,8 @@
 ## 1. Pre-requisites
 Before you begin, ensure you have the following software installed on your system:
 
-### 1.1 Visual Studio 2022
-Install Visual Studio 2022. To add the necessary Arm64 components, import the `components.vsconfig` configuration into the Visual Studio installer.
+### 1.1 Visual Studio 2026
+Install Visual Studio 2026. To add the necessary Arm64 components, import the `components.vsconfig` configuration into the Visual Studio installer.
 
 ### 1.2 Rust Programming Language
 Download and install Rust from the official Rust website: [https://www.rust-lang.org/tools/install](https://www.rust-lang.org/tools/install)

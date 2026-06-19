@@ -1273,62 +1273,47 @@ bool QnnApiHelpers::RunInference(
         }
     }
 
-    // Reading Ts-embedding data and Writing it into Unet Ts-Embedding tensor
+    // Write timestep into Unet Timestep tensor — handles INT32 and FLOAT32 scalar inputs
     {
         auto start = std::chrono::steady_clock::now();
-        const tensor_data_float32_t *ts_embedding_ptr = nullptr;
-        m_offTargetDataLoader->get_ts_embedding(m_StepIdx, ts_embedding_ptr);
+        int32_t timeStep = 0;
+        m_offTargetDataLoader->get_time_step(m_StepIdx, timeStep);
 
-        const auto &dim = m_ModelInputImageDims[m_TsEmbedTensorName.first][m_TsEmbedTensorName.second];
-        if (ts_embedding_ptr->size() != (unsigned long)(dim.height * dim.width * dim.channel))
-        {
-            QNN_ERROR("The Ts embedding data size %lu doesn't match with the size %lu of Ts embedding input of Unet",
-                      ts_embedding_ptr->size(), (unsigned long)(dim.height * dim.width * dim.channel));
-            return false;
-        }
-
-#ifdef DEBUG_DUMP
-        char buffer[20];
-        sprintf(buffer, "%03d", inference_count);
-        Helpers::writeRawData((void *)(&m_StepIdx), sizeof(m_StepIdx),
-                              getDebugFile(Helpers::joinPath("dataloader", std::string(buffer) + "_step_index_in.raw")));
-        Helpers::writeRawData((void *)ts_embedding_ptr->data(), ts_embedding_ptr->size() * sizeof((*ts_embedding_ptr)[0]),
-                              getDebugFile(Helpers::joinPath("dataloader", std::string(buffer) + "_ts_embedding_out.raw")));
-#endif
-#ifdef PRELOAD_DATA
-        char buffer1[20];
-        sprintf(buffer1, "%03d", inference_count);
-        if (false == Helpers::readRawData((void *)ts_embedding_ptr->data(),
-                                          ts_embedding_ptr->size() * sizeof((*ts_embedding_ptr)[0]),
-                                          m_DemoDataFolder + "unet/sample_" + m_SampleNum + "/inputs/" + std::string(buffer1) + "_t4_timeembedding.bin"))
-        {
-            QNN_ERROR("There is an Error in reading the data from file");
-            return false;
-        }
-#endif
-
-        // Getting ts-embedding buffer pointer
         const auto &tensor = m_InputTensorsBufBank[m_infer_in_pingpong_index][m_TsEmbedTensorName.first][m_TsEmbedTensorName.second];
-        uint16_t *unet_ts_embedding_buf_ip;
+
+        Qnn_Tensor_t *qnn_ts_tensor = nullptr;
+        void *ts_buf = nullptr;
+
         if (0 != m_qnnTensorMemorySet.count(tensor))
         {
-            unet_ts_embedding_buf_ip = (uint16_t *)m_ioTensor->getBuffer((Qnn_Tensor_t *)tensor);
+            qnn_ts_tensor = (Qnn_Tensor_t *)tensor;
+            ts_buf = m_ioTensor->getBuffer(qnn_ts_tensor);
         }
         else
         {
-            unet_ts_embedding_buf_ip = (uint16_t *)tensor;
+            ts_buf = (void *)tensor;
         }
-        // Applying qunatization on Ts-embedding data
-        for (size_t idx = 0; idx < ts_embedding_ptr->size(); idx++)
+
+        Qnn_DataType_t ts_dtype = (Qnn_DataType_t)0;
+        if (qnn_ts_tensor)
+            ts_dtype = QNN_TENSOR_GET_DATA_TYPE(qnn_ts_tensor);
+
+        if (ts_dtype == QNN_DATATYPE_FLOAT_32)
+            *((float32_t *)ts_buf) = (float32_t)timeStep;
+        else if (ts_dtype == QNN_DATATYPE_UFIXED_POINT_16)
         {
-            double value = (*ts_embedding_ptr)[idx] / m_TsEmbedQuantParam.scale - m_TsEmbedQuantParam.offset;
-            value = value < 0.0 ? 0.0 : value > 65535.0 ? 65535.0
-                                                        : value;
-            *unet_ts_embedding_buf_ip = (uint16_t)value;
-            unet_ts_embedding_buf_ip++;
+            double qval = (double)timeStep / m_TsEmbedQuantParam.scale - m_TsEmbedQuantParam.offset;
+            qval = qval < 0.0 ? 0.0 : qval > 65535.0 ? 65535.0 : qval;
+            *((uint16_t *)ts_buf) = (uint16_t)qval;
         }
+        else
+        {
+            // Default: INT32 scalar
+            *((int32_t *)ts_buf) = timeStep;
+        }
+
         auto stop = std::chrono::steady_clock::now();
-        Helpers::logProfile("writing Ts-embedding input (cpp) took", start, stop);
+        Helpers::logProfile("writing timestep input (cpp) took", start, stop);
     }
 
     // Writing Scheduler o/p into Unet Latent tensor
@@ -1683,7 +1668,7 @@ bool QnnApiHelpers::PostProcessOutput(
         std::memcpy((char *)returnVal.m_ImageData, (char *)tensor_mem_buf, returnVal.m_PostProcessedImageSize);
     }
     auto stop = std::chrono::steady_clock::now();
-    Helpers::logProfile("PostProcessOutput: m_PtrCustPost (cpp) took", start, stop);
+    Helpers::logProfile("PostProcessOutput (cpp) took", start, stop);
 
 #ifdef DEBUG_DUMP
     char buffer[20];

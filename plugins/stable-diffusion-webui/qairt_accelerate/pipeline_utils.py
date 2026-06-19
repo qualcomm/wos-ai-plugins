@@ -10,7 +10,7 @@ import qairt_constants as consts
 import numpy as np
 from PIL import Image
 from huggingface_hub import hf_hub_download
-from qai_appbuilder import QNNContextProc, QNNShareMemory
+from qai_appbuilder import QNNContextProc, QNNShareMemory, QNNConfig, Runtime, LogLevel, ProfilingLevel
 from diffusers import (
     DDIMScheduler,
     DPMSolverMultistepScheduler,
@@ -21,6 +21,18 @@ from diffusers import (
     PNDMScheduler,
     DDPMScheduler,
 )
+
+_qnn_initialized: bool = False
+
+def ensure_qnn_config() -> None:
+    """Call QNNConfig.Config exactly once for the lifetime of the process."""
+    global _qnn_initialized
+    if _qnn_initialized:
+        return
+    QNNConfig.Config(
+        consts.QNN_LIBS_DIR, Runtime.HTP, LogLevel.ERROR, ProfilingLevel.BASIC
+    )
+    _qnn_initialized = True
 
 
 class QPipeline:

@@ -543,7 +543,8 @@ bool fillDims(std::vector<size_t>& dims, uint32_t* inDimensions, uint32_t rank) 
         return false;
     }
 
-    if (2 > rank) {
+    // rank=0 is invalid; rank=1 is valid (e.g. scalar timestep tensor [1])
+    if (0 == rank) {
         QNN_ERROR("Invalid rank : %d", rank);
         return false;
     }
@@ -555,6 +556,6 @@ bool fillDims(std::vector<size_t>& dims, uint32_t* inDimensions, uint32_t rank) 
     for (size_t r = rank; r < 4; r++) {
         dims.push_back(1);
     }
-    
+
     return true;
 }

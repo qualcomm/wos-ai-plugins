@@ -24,21 +24,20 @@ class PipelineCache(metaclass=Singleton):
     pipeline = None
 
     def __init__(self):
-        self.pipeline = QnnStableDiffusionPipeline(consts.DEFAULT_TXT2IMG_MODEL)
+        self.pipeline = None
 
     def reload_pipeline(self, qnn_model_name):
-        if self.pipeline.model_name == qnn_model_name:
+        if self.pipeline is not None and self.pipeline.model_name == qnn_model_name:
             return qnn_model_name
 
-        print(f"### Reloading model {qnn_model_name}")
-        del self.pipeline
+        print(f"### Loading model {qnn_model_name}")
+        if self.pipeline is not None:
+            del self.pipeline
 
         if qnn_model_name in consts.CONTROLNET_MODELS:
             self.pipeline = QnnControlNetPipeline(qnn_model_name)
-        #elif qnn_model_name in consts.SD_UNCLIP_MODELS:
-        #    self.pipeline = QnnStableDiffusionUnClipPipeline(qnn_model_name)
         elif qnn_model_name in consts.STABLE_DIFFUSION_MODELS:
             self.pipeline = QnnStableDiffusionPipeline(qnn_model_name)
         else:
-            raise Exception(f"Unrecognized model {qnn_model_name}!") 
+            raise Exception(f"Unrecognized model {qnn_model_name}!")
         return qnn_model_name

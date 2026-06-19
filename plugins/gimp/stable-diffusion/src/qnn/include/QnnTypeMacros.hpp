@@ -188,7 +188,7 @@ inline void setQnnOpConfigOutputs(Qnn_OpConfig_t* opConfig,
 }
 
 inline uint32_t getQnnTensorId(const Qnn_Tensor_t& tensor) {
-  if (tensor.version == QNN_TENSOR_VERSION_1) {
+  if (tensor.version >= QNN_TENSOR_VERSION_1) {
     return tensor.v1.id;
   }
   return 0u;
@@ -197,10 +197,10 @@ inline uint32_t getQnnTensorId(const Qnn_Tensor_t& tensor) {
 inline uint32_t getQnnTensorId(const Qnn_Tensor_t* tensor) { return getQnnTensorId(*tensor); }
 
 inline const char* getQnnTensorName(const Qnn_Tensor_t& tensor) {
-  if (tensor.version == QNN_TENSOR_VERSION_1) {
+  if (tensor.version >= QNN_TENSOR_VERSION_1) {
     return tensor.v1.name;
   }
-  return 0u;
+  return nullptr;
 }
 
 inline const char* getQnnTensorName(const Qnn_Tensor_t* tensor) {
@@ -208,7 +208,7 @@ inline const char* getQnnTensorName(const Qnn_Tensor_t* tensor) {
 }
 
 inline Qnn_TensorType_t getQnnTensorType(const Qnn_Tensor_t& tensor) {
-  if (tensor.version == QNN_TENSOR_VERSION_1) {
+  if (tensor.version >= QNN_TENSOR_VERSION_1) {
     return tensor.v1.type;
   }
   return QNN_TENSOR_TYPE_UNDEFINED;
@@ -219,7 +219,7 @@ inline Qnn_TensorType_t getQnnTensorType(const Qnn_Tensor_t* tensor) {
 }
 
 inline Qnn_TensorDataFormat_t getQnnTensorDataFormat(const Qnn_Tensor_t& tensor) {
-  if (tensor.version == QNN_TENSOR_VERSION_1) {
+  if (tensor.version >= QNN_TENSOR_VERSION_1) {
     return tensor.v1.dataFormat;
   }
   return QNN_TENSOR_DATA_FORMAT_FLAT_BUFFER;
@@ -230,7 +230,7 @@ inline Qnn_TensorDataFormat_t getQnnTensorDataFormat(const Qnn_Tensor_t* tensor)
 }
 
 inline Qnn_DataType_t getQnnTensorDataType(const Qnn_Tensor_t& tensor) {
-  if (tensor.version == QNN_TENSOR_VERSION_1) {
+  if (tensor.version >= QNN_TENSOR_VERSION_1) {
     return tensor.v1.dataType;
   }
   return QNN_DATATYPE_UNDEFINED;
@@ -241,7 +241,7 @@ inline Qnn_DataType_t getQnnTensorDataType(const Qnn_Tensor_t* tensor) {
 }
 
 inline Qnn_QuantizeParams_t getQnnTensorQuantParams(const Qnn_Tensor_t& tensor) {
-  if (tensor.version == QNN_TENSOR_VERSION_1) {
+  if (tensor.version >= QNN_TENSOR_VERSION_1) {
     return tensor.v1.quantizeParams;
   }
   return QNN_QUANTIZE_PARAMS_INIT;
@@ -252,7 +252,7 @@ inline Qnn_QuantizeParams_t getQnnTensorQuantParams(const Qnn_Tensor_t* tensor) 
 }
 
 inline uint32_t getQnnTensorRank(const Qnn_Tensor_t& tensor) {
-  if (tensor.version == QNN_TENSOR_VERSION_1) {
+  if (tensor.version >= QNN_TENSOR_VERSION_1) {
     return tensor.v1.rank;
   }
   return 0u;
@@ -261,10 +261,10 @@ inline uint32_t getQnnTensorRank(const Qnn_Tensor_t& tensor) {
 inline uint32_t getQnnTensorRank(const Qnn_Tensor_t* tensor) { return getQnnTensorRank(*tensor); }
 
 inline uint32_t* getQnnTensorDimensions(const Qnn_Tensor_t& tensor) {
-  if (tensor.version == QNN_TENSOR_VERSION_1) {
+  if (tensor.version >= QNN_TENSOR_VERSION_1) {
     return tensor.v1.dimensions;
   }
-  return NULL;
+  return nullptr;
 }
 
 inline uint32_t* getQnnTensorDimensions(const Qnn_Tensor_t* tensor) {
@@ -272,7 +272,7 @@ inline uint32_t* getQnnTensorDimensions(const Qnn_Tensor_t* tensor) {
 }
 
 inline Qnn_TensorMemType_t getQnnTensorMemType(const Qnn_Tensor_t& tensor) {
-  if (tensor.version == QNN_TENSOR_VERSION_1) {
+  if (tensor.version >= QNN_TENSOR_VERSION_1) {
     return tensor.v1.memType;
   }
   return QNN_TENSORMEMTYPE_UNDEFINED;
@@ -283,7 +283,7 @@ inline Qnn_TensorMemType_t getQnnTensorMemType(const Qnn_Tensor_t* tensor) {
 }
 
 inline Qnn_ClientBuffer_t getQnnTensorClientBuf(const Qnn_Tensor_t& tensor) {
-  if (tensor.version == QNN_TENSOR_VERSION_1) {
+  if (tensor.version >= QNN_TENSOR_VERSION_1) {
     return tensor.v1.clientBuf;
   }
   return QNN_CLIENT_BUFFER_INIT;
@@ -294,10 +294,10 @@ inline Qnn_ClientBuffer_t getQnnTensorClientBuf(const Qnn_Tensor_t* tensor) {
 }
 
 inline Qnn_MemHandle_t getQnnTensorMemHandle(const Qnn_Tensor_t& tensor) {
-  if (tensor.version == QNN_TENSOR_VERSION_1) {
+  if (tensor.version >= QNN_TENSOR_VERSION_1) {
     return tensor.v1.memHandle;
   }
-  return NULL;
+  return nullptr;
 }
 
 inline Qnn_MemHandle_t getQnnTensorMemHandle(const Qnn_Tensor_t* tensor) {
@@ -305,7 +305,7 @@ inline Qnn_MemHandle_t getQnnTensorMemHandle(const Qnn_Tensor_t* tensor) {
 }
 
 inline void setQnnTensorId(Qnn_Tensor_t& tensor, uint32_t id) {
-  if (tensor.version == QNN_TENSOR_VERSION_1) {
+  if (tensor.version >= QNN_TENSOR_VERSION_1) {
     tensor.v1.id = id;
   }
 }
@@ -313,7 +313,7 @@ inline void setQnnTensorId(Qnn_Tensor_t& tensor, uint32_t id) {
 inline void setQnnTensorId(Qnn_Tensor_t* tensor, uint32_t id) { setQnnTensorId(*tensor, id); }
 
 inline void setQnnTensorName(Qnn_Tensor_t& tensor, const char* name) {
-  if (tensor.version == QNN_TENSOR_VERSION_1) {
+  if (tensor.version >= QNN_TENSOR_VERSION_1) {
     tensor.v1.name = name;
   }
 }
@@ -323,7 +323,7 @@ inline void setQnnTensorName(Qnn_Tensor_t* tensor, const char* name) {
 }
 
 inline void setQnnTensorType(Qnn_Tensor_t& tensor, Qnn_TensorType_t type) {
-  if (tensor.version == QNN_TENSOR_VERSION_1) {
+  if (tensor.version >= QNN_TENSOR_VERSION_1) {
     tensor.v1.type = type;
   }
 }
@@ -333,7 +333,7 @@ inline void setQnnTensorType(Qnn_Tensor_t* tensor, Qnn_TensorType_t type) {
 }
 
 inline void setQnnTensorDataFormat(Qnn_Tensor_t& tensor, Qnn_TensorDataFormat_t format) {
-  if (tensor.version == QNN_TENSOR_VERSION_1) {
+  if (tensor.version >= QNN_TENSOR_VERSION_1) {
     tensor.v1.dataFormat = format;
   }
 }
@@ -343,7 +343,7 @@ inline void setQnnTensorDataFormat(Qnn_Tensor_t* tensor, Qnn_TensorDataFormat_t 
 }
 
 inline void setQnnTensorDataType(Qnn_Tensor_t& tensor, Qnn_DataType_t dataType) {
-  if (tensor.version == QNN_TENSOR_VERSION_1) {
+  if (tensor.version >= QNN_TENSOR_VERSION_1) {
     tensor.v1.dataType = dataType;
   }
 }
@@ -353,7 +353,7 @@ inline void setQnnTensorDataType(Qnn_Tensor_t* tensor, Qnn_DataType_t dataType) 
 }
 
 inline void setQnnTensorQuantParams(Qnn_Tensor_t& tensor, Qnn_QuantizeParams_t params) {
-  if (tensor.version == QNN_TENSOR_VERSION_1) {
+  if (tensor.version >= QNN_TENSOR_VERSION_1) {
     tensor.v1.quantizeParams = params;
   }
 }
@@ -363,7 +363,7 @@ inline void setQnnTensorQuantParams(Qnn_Tensor_t* tensor, Qnn_QuantizeParams_t p
 }
 
 inline void setQnnTensorRank(Qnn_Tensor_t& tensor, uint32_t rank) {
-  if (tensor.version == QNN_TENSOR_VERSION_1) {
+  if (tensor.version >= QNN_TENSOR_VERSION_1) {
     tensor.v1.rank = rank;
   }
 }
@@ -373,7 +373,7 @@ inline void setQnnTensorRank(Qnn_Tensor_t* tensor, uint32_t rank) {
 }
 
 inline void setQnnTensorDimensions(Qnn_Tensor_t& tensor, uint32_t* dims) {
-  if (tensor.version == QNN_TENSOR_VERSION_1) {
+  if (tensor.version >= QNN_TENSOR_VERSION_1) {
     tensor.v1.dimensions = dims;
   }
 }
@@ -383,7 +383,7 @@ inline void setQnnTensorDimensions(Qnn_Tensor_t* tensor, uint32_t* dims) {
 }
 
 inline void setQnnTensorMemType(Qnn_Tensor_t& tensor, Qnn_TensorMemType_t memType) {
-  if (tensor.version == QNN_TENSOR_VERSION_1) {
+  if (tensor.version >= QNN_TENSOR_VERSION_1) {
     tensor.v1.memType = memType;
   }
 }
@@ -393,7 +393,7 @@ inline void setQnnTensorMemType(Qnn_Tensor_t* tensor, Qnn_TensorMemType_t memTyp
 }
 
 inline void setQnnTensorClientBuf(Qnn_Tensor_t& tensor, Qnn_ClientBuffer_t clientBuf) {
-  if (tensor.version == QNN_TENSOR_VERSION_1) {
+  if (tensor.version >= QNN_TENSOR_VERSION_1) {
     tensor.v1.clientBuf = clientBuf;
   }
 }
@@ -403,7 +403,7 @@ inline void setQnnTensorClientBuf(Qnn_Tensor_t* tensor, Qnn_ClientBuffer_t clien
 }
 
 inline void setQnnTensorMemHandle(Qnn_Tensor_t& tensor, Qnn_MemHandle_t handle) {
-  if (tensor.version == QNN_TENSOR_VERSION_1) {
+  if (tensor.version >= QNN_TENSOR_VERSION_1) {
     tensor.v1.memHandle = handle;
   }
 }

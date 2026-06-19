@@ -13,13 +13,32 @@ from pathlib import Path
 
 
 QAI_APPBUILDER_WHEEL_URL = "https://github.com/quic/ai-engine-direct-helper/releases/download/v2.38.0/qai_appbuilder-2.38.0-cp310-cp310-win_amd64.whl"
-QAIRT_VERSION = "2.44.0.260225"
+QAIRT_VERSION = "2.46.0.260424"
 QNN_SDK_DOWNLOAD_URL = f"https://softwarecenter.qualcomm.com/api/download/software/sdks/Qualcomm_AI_Runtime_Community/All/{QAIRT_VERSION}/v{QAIRT_VERSION}.zip"
 DSP_ARCHS = ["73", "81"]
+
+# BIOS SoC ID -> DSP architecture version mapping (mirrors get_arch_id.py)
+BIOS_ARCH_MAP = {
+    8380: 73,   # Snapdragon X Elite
+    8480: 81,   # Snapdragon X2 Elite
+}
+
+# Architecture-specific binary ZIP URLs (QAI Hub S3, v0.53.1)
+ARCH_BINARY_URLS = {
+    73: {
+        "controlnet": "https://qaihub-public-assets.s3.us-west-2.amazonaws.com/qai-hub-models/models/controlnet_canny/releases/v0.53.1/controlnet_canny-qnn_context_binary-w8a16-qualcomm_snapdragon_x_elite.zip",
+        "sd1_5":      "https://qaihub-public-assets.s3.us-west-2.amazonaws.com/qai-hub-models/models/stable_diffusion_v1_5/releases/v0.53.1/stable_diffusion_v1_5-qnn_context_binary-w8a16-qualcomm_snapdragon_x_elite.zip",
+        "sd2_1":      "https://qaihub-public-assets.s3.us-west-2.amazonaws.com/qai-hub-models/models/stable_diffusion_v2_1/releases/v0.53.1/stable_diffusion_v2_1-qnn_context_binary-w8a16-qualcomm_snapdragon_x_elite.zip",
+    },
+    81: {
+        "controlnet": "https://qaihub-public-assets.s3.us-west-2.amazonaws.com/qai-hub-models/models/controlnet_canny/releases/v0.53.1/controlnet_canny-qnn_context_binary-w8a16-qualcomm_snapdragon_x2_elite.zip",
+        "sd1_5":      "https://qaihub-public-assets.s3.us-west-2.amazonaws.com/qai-hub-models/models/stable_diffusion_v1_5/releases/v0.53.1/stable_diffusion_v1_5-qnn_context_binary-w8a16-qualcomm_snapdragon_x2_elite.zip",
+        "sd2_1":      "https://qaihub-public-assets.s3.us-west-2.amazonaws.com/qai-hub-models/models/stable_diffusion_v2_1/releases/v0.53.1/stable_diffusion_v2_1-qnn_context_binary-w8a16-qualcomm_snapdragon_x2_elite.zip",
+    },
+}
 EXTENSION_WS = os.path.join(extensions_dir, "qairt_accelerate")
 QNN_LIBS_DIR = os.path.join(EXTENSION_WS, "qnn_assets", "qnn_libs")
 CACHE_DIR = os.path.join(EXTENSION_WS, "qnn_assets", "cache")
-CONVERTION_DIR = os.path.join(EXTENSION_WS, "qnn_assets", "model_conversion")
 
 
 SDK_SAVE_PATH = os.path.join(EXTENSION_WS, f"{QAIRT_VERSION}.zip")
@@ -40,32 +59,3 @@ STABLE_DIFFUSION_MODELS = [DEFAULT_TXT2IMG_MODEL, "Stable-Diffusion-2.1"]
 CONTROLNET_DIR = os.path.abspath(os.path.join(models_path, "Stable-diffusion", f"qcom-{'ControlNet-v10-sd15-canny'}"))
 SD1_5_DIR = os.path.abspath(os.path.join(models_path, "Stable-diffusion", f"qcom-{'Stable-Diffusion-v1.5'}"))
 SD2_1_DIR = os.path.abspath(os.path.join(models_path, "Stable-diffusion", f"qcom-{'Stable-Diffusion-v2.1'}"))
-TIME_EMBEDDING_DIR = os.path.join(CONVERTION_DIR, "time_embedding")
-
-TIMESTEP_EMBEDDING_1_5_MODEL_PATH = os.path.join(TIME_EMBEDDING_DIR, "time_embedding_sd_1_5.pt")
-TIMESTEP_EMBEDDING_2_1_MODEL_PATH = os.path.join(TIME_EMBEDDING_DIR, "time_embedding_sd_2_1.pt")
-
-TIME_EMBEDDING_1_5_MODEL_PATH = TIMESTEP_EMBEDDING_1_5_MODEL_PATH
-TIME_EMBEDDING_2_1_MODEL_PATH = TIMESTEP_EMBEDDING_2_1_MODEL_PATH
-
-PRE_COMPUTED_DATA_DIR = os.path.join(EXTENSION_WS, "pre_computed_data")
-
-CONTROLNET_HF_URLS = {
-    "controlnet.serialized.bin": "https://huggingface.co/qualcomm/ControlNet-Canny/resolve/v0.34.3/precompiled/qualcomm-snapdragon-x-elite/ControlNet-Canny_controlnet_w8a16.bin",
-    "text_encoder.serialized.bin": "https://huggingface.co/qualcomm/ControlNet-Canny/resolve/v0.34.3/precompiled/qualcomm-snapdragon-x-elite/ControlNet-Canny_text_encoder_w8a16.bin",
-    "unet.serialized.bin": "https://huggingface.co/qualcomm/ControlNet-Canny/resolve/v0.34.3/precompiled/qualcomm-snapdragon-x-elite/ControlNet-Canny_unet_w8a16.bin",
-    "vae_decoder.serialized.bin": "https://huggingface.co/qualcomm/ControlNet-Canny/resolve/v0.34.3/precompiled/qualcomm-snapdragon-x-elite/ControlNet-Canny_vae_w8a16.bin",
-}
-
-SD1_5_HF_URLS = {
-    "text_encoder.serialized.bin": "https://huggingface.co/qualcomm/Stable-Diffusion-v1.5/resolve/9e5bf02813f129951adee071c5a1723c9b239069/TextEncoderQuantizable.bin",
-    "unet.serialized.bin": "https://huggingface.co/qualcomm/Stable-Diffusion-v1.5/resolve/9e5bf02813f129951adee071c5a1723c9b239069/UnetQuantizable.bin",
-    "vae_decoder.serialized.bin": "https://huggingface.co/qualcomm/Stable-Diffusion-v1.5/resolve/9e5bf02813f129951adee071c5a1723c9b239069/VaeDecoderQuantizable.bin",
-}
-
-SD2_1_HF_URLS = {
-    "text_encoder.serialized.bin": "https://huggingface.co/qualcomm/Stable-Diffusion-v2.1/resolve/ba5473e130aa0b9fb89dd8242ab95ae712abe728/TextEncoderQuantizable.bin",
-    "unet.serialized.bin": "https://huggingface.co/qualcomm/Stable-Diffusion-v2.1/resolve/ba5473e130aa0b9fb89dd8242ab95ae712abe728/UnetQuantizable.bin",
-    "vae_decoder.serialized.bin": "https://huggingface.co/qualcomm/Stable-Diffusion-v2.1/resolve/ba5473e130aa0b9fb89dd8242ab95ae712abe728/VaeDecoderQuantizable.bin",
-}
-

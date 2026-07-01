@@ -23,7 +23,7 @@ Install "OpenCL™, OpenGL®, and Vulkan® Compatibility Pack" from Microsoft St
 Download Blender Arm64 4.5 version from [Download page](https://www.blender.org/download/).
 
 ### Step 3: Download Blender ControlNet Plugin
-Download `blender-controlnet-plugin-v3.0.zip` from the [latest release](https://github.com/qualcomm/wos-ai-plugins/releases/tag/v2.0-blender). 
+Download `blender-controlnet-plugin-v2.0.zip` from the [latest release](https://github.com/qualcomm/wos-ai-plugins/releases/tag/v2.0-blender). 
 
 
 Unzip and place the `SnapdragonImageGeneration` folder under `C:\Users\<user>\AppData\Roaming\Blender Foundation\Blender\4.5\scripts\addons`

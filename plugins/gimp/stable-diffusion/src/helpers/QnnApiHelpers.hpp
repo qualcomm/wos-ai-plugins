@@ -44,7 +44,7 @@ public:
     QnnApiHelpers();
     ~QnnApiHelpers();
 
-    // Definitation of virtual functions from RuntimeApiHelpers abstarct class
+    // Definition of virtual functions from RuntimeApiHelpers abstract class
     int32_t Init (std::string configFilePath, std::string nativeLibPath,
                   int32_t inputWidth, int32_t inputHeight, float inputChannel,
                   int32_t outputWidth, int32_t outputHeight, float outputChannel,
@@ -67,11 +67,11 @@ public:
                           );
 
     /**
-    * @brief template function for executing HRNET. The input/ouput can be either user buffer or HRNET tensor.
+    * @brief template function for executing HRNET. The input/output can be either user buffer or HRNET tensor.
     * @param input: the current frame to process
     * @param output: the result from model after running it using HRNET.
 
-    * @return: true if no error, False otherwise
+    * @return: true if no error, false otherwise
     */
     template<class T1, class T2>
     inline bool ExecuteModel ( T1& input, T2& output, std::string graphName )
@@ -103,7 +103,7 @@ public:
     //size_t get_token_ids(const char* text, uint32_t* buffer, size_t buffer_length);
 
 private:
-    // Funtion to append the debug dump path and then return the full path to the file name
+    // Function to append the debug dump path and then return the full path to the file name
 #if defined(DEBUG_DUMP) || defined(OUTPUT_DUMP) || defined(PRELOAD_DATA)
     inline std::string getDebugFile(const std::string& filename) {
         return Helpers::joinPath(Helpers::joinPath(DEBUG_DUMP_TARGET_PATH, "sample_"+m_SampleNum), filename);

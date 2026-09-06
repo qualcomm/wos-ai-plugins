@@ -133,7 +133,7 @@ bool BackendExtensions::initialize() {
     return false;
   }
   if (!m_backendInterface->setPerfProfile(m_perfProfile)) {
-    QNN_ERROR("Unable to set perf profile in  backend extensions interface.");
+    QNN_ERROR("Unable to set perf profile in backend extensions interface.");
     return false;
   }
   if (!m_backendInterface->loadConfig(m_backendExtensionsConfigPath)) {

@@ -65,7 +65,7 @@ bool UiHelper::init() {
         printf("Initialization failure");
         return false;
     }
-    std::cout << "UI Initialisation complete" << std::endl;
+    std::cout << "UI Initialization complete" << std::endl;
     return true;
 }
 

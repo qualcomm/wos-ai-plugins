@@ -60,11 +60,11 @@ void* RpcMem::getBuffer(Qnn_Tensor_t* tensor) {
 
 int RpcMem::getFd(Qnn_Tensor_t* tensor) {
   if (!tensor) {
-    QNN_WARN("getBuffer: received a null pointer to a tensor");
+    QNN_WARN("getFd: received a null pointer to a tensor");
     return -1;
   }
   if (m_tensorToRpcMem.find(tensor) == m_tensorToRpcMem.end()) {
-    QNN_WARN("getBuffer: tensor not found");
+    QNN_WARN("getFd: tensor not found");
     return -1;
   }
   return m_tensorToRpcMem[tensor].fd;

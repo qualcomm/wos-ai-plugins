@@ -45,7 +45,7 @@ int32_t RuntimeApiHelpers::LoadLibraries(std::string customLibName){
 #endif // UWP
 
         if(nullptr == m_CustomLibHandle){
-        DEMO_ERROR("Problem loading CustomHelper Library %s:%s \n Can not proceed.",
+        DEMO_ERROR("Problem loading CustomHelper Library %s:%s \n Cannot proceed.",
                             customLibName.c_str(), dlerror());
         return -1;
     }
@@ -60,7 +60,7 @@ int32_t RuntimeApiHelpers::LoadLibraries(std::string customLibName){
     m_PtrCustInit = (m_CustInitPtr)dlsym(m_CustomLibHandle, "Init");
 #endif
     if (nullptr == m_PtrCustInit) {
-        DEMO_DEBUG("Did not find Init function: %s \n App will be only using built in.",
+        DEMO_DEBUG("Did not find Init function: %s \n App will be only using built-in.",
                             dlerror());
     }
 
@@ -73,7 +73,7 @@ int32_t RuntimeApiHelpers::LoadLibraries(std::string customLibName){
     m_PtrCustPre = (m_CustPrePtr) dlsym(m_CustomLibHandle, "PreProcessInput");
 #endif
     if (nullptr == m_PtrCustPre) {
-        DEMO_DEBUG("Did not find preprocess function: %s \n App will be using only built in.",
+        DEMO_DEBUG("Did not find preprocess function: %s \n App will be using only built-in.",
                             dlerror());
     }
 
@@ -85,7 +85,7 @@ int32_t RuntimeApiHelpers::LoadLibraries(std::string customLibName){
     m_PtrCustPost = (m_CustPostPtr)dlsym(m_CustomLibHandle, "PostProcessOutput");
 #endif
     if (nullptr == m_PtrCustPost) {
-        DEMO_DEBUG("Cant find PostprocessOutput function. %s \n App will be using only built in.",
+        DEMO_DEBUG("Can't find PostprocessOutput function. %s \n App will be using only built-in.",
                             dlerror());
     }
 
